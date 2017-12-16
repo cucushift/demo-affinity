@@ -1,0 +1,8 @@
+- hosts: localhost
+  remote_user: vagrant
+  serial: 1
+  roles:
+    - docker
+    - k8s-base
+    - k8s-master
+    - test

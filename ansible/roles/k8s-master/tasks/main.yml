@@ -1,0 +1,61 @@
+---
+- name: Ensure kubeadm initialization
+  become: yes
+  command: "kubeadm init --token 2f1a31.00f66dec74fd53f3 --apiserver-advertise-address=172.42.42.101 --ignore-preflight-errors=all"
+  tags:
+    - k8s
+
+- name: Ensure Kube directory
+  file:
+    path: /home/ubuntu/.kube
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: 0700
+  tags:
+    - k8s
+
+- name: Ensure K8s Config
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/ubuntu/.kube/config
+    owner: ubuntu
+    group: ubuntu
+    mode: 0600
+  tags:
+    - k8s
+
+  # This still seems to be a requirement with Weave, very disappointing.
+- name: Set --proxy-mode flag in kube-proxy daemonset (workaround for https://github.com/kubernetes/kubernetes/issues/34101)
+  become: yes
+  shell: "kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system get ds -l 'k8s-app==kube-proxy' -o json | jq '.items[0].spec.template.spec.containers[0].command |= .+ [\"--proxy-mode=userspace\"]' | kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f - && kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system delete pods -l 'k8s-app==kube-proxy'"
+  register: proxy
+  until: proxy.rc == 0
+  retries: 60
+  delay: 10
+  tags:
+    - k8s
+
+- name: Copy config to /Vagrant for other VMs
+  become: yes
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /vagrant/admin.conf
+    mode: 0644
+
+- name: Capture K8s version
+  shell: kubectl --kubeconfig=/etc/kubernetes/admin.conf version | base64 | tr -d '\n'
+  register: k8s_version
+  changed_when: false
+  tags:
+    - k8s
+
+- name: Ensure POD Network Started
+  command: kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f "https://cloud.weave.works/k8s/net?k8s-version={{k8s_version.stdout}}"
+  tags:
+    - k8s
+
+- name: Taint Master
+  command: kubectl --kubeconfig=/etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/master-
+  tags:
+    - k8s

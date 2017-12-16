@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: must-not-have-accel-and-perst
+  namespace: vnf
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: hw.accel
+            operator: In
+            values:
+            - "false"
+          - key: hw.perst
+            operator: In
+            values:
+            - "false"
+  containers:
+  - name: vnf
+    image: vnf:latest
+    imagePullPolicy: Never

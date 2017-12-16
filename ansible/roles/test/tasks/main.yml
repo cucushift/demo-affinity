@@ -1,0 +1,32 @@
+---
+- name: Ensure Helper scripts
+  copy:
+    src: scripts/{{ item }}
+    dest: /usr/local/bin/{{ item }}
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+    - demo-show-labels.sh
+    - demo-create-preferenced-vnfs.sh
+    - demo-delete-all-vnfs.sh
+
+- name: Ensure Test Components
+  copy:
+    src: "{{ item }}"
+    dest: /home/ubuntu
+    owner: ubuntu
+    group: ubuntu
+    mode: 0644
+  with_items:
+    - detective
+    - vnf
+
+- name: Ensure Utility Images
+  command: docker pull opencord/voltha-j2:latest
+
+- name: Ensure Test Docker Images
+  command: docker build -t {{ item }}:latest -f /home/ubuntu/{{ item }}/Dockerfile.{{ item }} /home/ubuntu/{{ item }}
+  with_items:
+    - detective
+    - vnf

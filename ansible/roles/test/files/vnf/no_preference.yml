@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: no-preference
+  namespace: vnf
+spec:
+  containers:
+  - name: vnf
+    image: vnf:latest
+    imagePullPolicy: Never

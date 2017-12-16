@@ -1,0 +1,5 @@
+FROM python:2-alpine
+
+COPY vnf.py /vnf.py
+RUN chmod 755 /vnf.py
+ENTRYPOINT /vnf.py
